@@ -1658,7 +1658,7 @@ grammar Perl6::Grammar is HLL::Grammar does STD {
                  "the filehandle's .slurp method")>
         ]?
         [ <?before [ '(' || \h*<sigil><twigil>?\w ] >
-            <.obs('undef as a verb', 'undefine function or assignment of Nil')>
+            <.obs('undef as a verb', 'undefine() or assignment of Nil')>
         ]?
         <.obs('undef as a value', "something more specific:\n\tan undefined type object such as Any or Int,\n\t:!defined as a matcher,\n\tAny:U as a type constraint,\n\tNil as the absence of an expected value\n\tor fail() as a failure return\n\t   ")>
     }
@@ -3887,7 +3887,10 @@ grammar Perl6::Grammar is HLL::Grammar does STD {
     token prefix:sym<~^>  { <sym>  <O('%symbolic_unary')> }
     token prefix:sym<?^>  { <sym>  <O('%symbolic_unary')> }
     token prefix:sym<^^>  { <sym> <.dupprefix('^^')> <O('%symbolic_unary')> }
-    token prefix:sym<^>   { <sym>  <O('%symbolic_unary')> }
+    token prefix:sym<^>   {
+        <sym>  <O('%symbolic_unary')>
+        <?before \d+ <?before \. <?alpha> > <.worry: "Precedence of ^ is looser than method call; please parenthesize"> >?
+    }
     token prefix:sym<|>   {
         <sym> <O('%symbolic_unary')>
         [ <?{ $*ARG_FLAT_OK }> || <.typed_sorry('X::Syntax::ArgFlattener')> ]

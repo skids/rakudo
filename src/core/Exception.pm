@@ -9,7 +9,6 @@ my class Exception {
         if $!bt { $!bt }
         elsif nqp::isconcrete($!ex) {
             nqp::bindattr(self, Exception, '$!bt', Backtrace.new($!ex));
-            $!bt
         }
         else { '' }
     }

@@ -5,9 +5,12 @@ my class Exception {
     has $!ex;
     has $!bt;
 
-    method backtrace(Exception:D:) {
+    method backtrace(Exception:D is rw:) {
         if $!bt { $!bt }
-        elsif nqp::isconcrete($!ex) { Backtrace.new($!ex); }
+        elsif nqp::isconcrete($!ex) {
+            nqp::bindattr(self, Exception, '$!bt', Backtrace.new($!ex));
+            $!bt
+        }
         else { '' }
     }
 

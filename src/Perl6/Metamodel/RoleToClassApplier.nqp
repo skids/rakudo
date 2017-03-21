@@ -62,13 +62,39 @@ my class RoleToClassApplier {
         # Collisions?
         my @collisions := $to_compose_meta.collisions($to_compose);
         for @collisions {
+            my sub via_list(@roles, @meths) {
+                my $idx := 0;
+                my @vias := [];
+                for @roles {
+                    my $package := NQPMu;
+                    try { $package := @meths[$idx].package }
+                    if $package =:= NQPMu {
+                            # We hit a circular sawtooth.  Fake it.
+                            $package := $_;
+                    }
+                    if nqp::iseq_s($package.HOW.name($package), 'Perl6::Metamodel::CurriedRoleHOW') {
+                        $package := $package.name($package);
+                    }
+                    else {
+                        $package := $package.HOW.name($package);
+                    }
+                    if nqp::iseq_s($package, $_) {
+                        @vias.push($_);
+                    }
+                    else {
+                        @vias.push($package ~ " via " ~ $_);
+                    }
+                    $idx++;
+                }
+                nqp::join(", ", @vias);
+            }
             if $_.private {
                 unless has_private_method($target, $_.name) {
                     nqp::die("Private method '" ~ $_.name ~
                         "' must be resolved by class " ~
                         $target.HOW.name($target) ~
                         " because it exists in multiple roles (" ~
-                        nqp::join(", ", $_.roles) ~ ")");
+                        via_list($_.roles, $_.methods) ~ ")");
                 }
             }
             elsif nqp::isconcrete($_.multi) {
@@ -85,7 +111,7 @@ my class RoleToClassApplier {
                         $_.multi.signature.perl ~ " must be resolved by class " ~
                         $target.HOW.name($target) ~
                         " because it exists in multiple roles (" ~
-                        nqp::join(", ", $_.roles) ~ ")");
+                        via_list($_.roles, $_.methods) ~ ")");
                 }
             }
             else {
@@ -94,7 +120,7 @@ my class RoleToClassApplier {
                         "' must be resolved by class " ~
                         $target.HOW.name($target) ~
                         " because it exists in multiple roles (" ~
-                        nqp::join(", ", $_.roles) ~ ")");
+                        via_list($_.roles, $_.methods) ~ ")");
                 }
             }
         }
@@ -190,6 +216,10 @@ my class RoleToClassApplier {
             if has_attribute($target, $_.name) {
                 nqp::die("Attribute '" ~ $_.name ~ "' already exists in the class '" ~
                     $target.HOW.name($target) ~ "', but a role also wishes to compose it");
+            }
+            # Set package back to us.
+            if nqp::can($_, 'set_package') {
+                $_.set_package($target.WHAT);
             }
             $target.HOW.add_attribute($target, $_);
         }

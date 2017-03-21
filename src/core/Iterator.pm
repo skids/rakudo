@@ -2,7 +2,7 @@
 # fallback implementations for most of it, so any given iterator can pick
 # and choose what bits it can implement better for performance and/or
 # correctness reasons.
-my role Iterator {
+my role Iterator is face {
     # Pulls one value from the iterator. If there's nothing more to pull,
     # returns the constant IterationEnd. If you don't override any other
     # methods in this role, they'll all end up falling back to using this.

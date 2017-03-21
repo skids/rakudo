@@ -23,6 +23,7 @@ class Perl6::Metamodel::CurriedRoleHOW
     has $!curried_role;
     has @!pos_args;
     has %!named_args;
+    has $!is_face;
 
     my $archetypes_g := Perl6::Metamodel::Archetypes.new( :composable(1), :inheritalizable(1), :parametric(1), :generic(1) );
     my $archetypes_ng := Perl6::Metamodel::Archetypes.new( :nominal(1), :composable(1), :inheritalizable(1), :parametric(1) );
@@ -80,8 +81,28 @@ class Perl6::Metamodel::CurriedRoleHOW
     }
     
     method specialize($obj, $first_arg) {
-        $!curried_role.HOW.specialize($!curried_role, $first_arg,
-            |@!pos_args, |%!named_args);
+        my $spec :=
+            $!curried_role.HOW.specialize($!curried_role, $first_arg,
+                |@!pos_args, |%!named_args);
+        # Glean facedness now that specialization has chosen a ParametricRole
+        $!is_face := $spec.HOW.is_face($spec);
+        # Update package of methods and attributes
+        for $spec.HOW.method_table($spec) {
+            $_.value.set_package(self);
+        }
+        for $spec.HOW.submethod_table($spec) {
+            $_.value.set_package(self);
+        }
+        for $spec.HOW.private_method_table($spec) {
+            $_.value.set_package(self);
+        }
+        for $spec.HOW.multi_methods_to_incorporate($spec) {
+            $_.code.set_package(self);
+        }
+        for $spec.HOW.attributes($spec, :local) {
+            $_.set_package(self);
+        }
+        $spec
     }
     
     method curried_role($obj) {
@@ -149,6 +170,10 @@ class Perl6::Metamodel::CurriedRoleHOW
         }
         
         0;
+    }
+
+    method is_face() {
+        $!is_face
     }
 
     method shortname($curried_role) {

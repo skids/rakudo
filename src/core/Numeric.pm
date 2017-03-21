@@ -1,7 +1,7 @@
 # for our tantrums
 my class X::Numeric::DivideByZero { ... }
 
-my role Numeric {
+my role Numeric is face {
     multi method Numeric(Numeric:D:) { self }
 
     multi method ACCEPTS(Numeric:D: Any:D \a) {

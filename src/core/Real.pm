@@ -1,6 +1,6 @@
 my class Complex { ... }
 
-my role Real does Numeric {
+my role Real does Numeric is face {
     method Rat(Real:D: Real $epsilon = 1.0e-6) { self.Bridge.Rat($epsilon) }
     method abs()  { self < 0 ?? -self !! self }
     method sign(Real:D:) { self > 0 ?? 1 !! self < 0 ?? -1 !! +self }

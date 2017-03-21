@@ -1,7 +1,7 @@
 # API to obtain the data of any addressable content
 role Distribution { ... }
 
-role Distribution {
+role Distribution is face {
     # `meta` provides an API to the meta data in META6 spec (s22)
     #   -   A Distribution may be represented internally by some other
     #       spec (such as using the file system itself for prereqs), as

@@ -1,4 +1,4 @@
-my role Baggy does QuantHash {
+my role Baggy does QuantHash is face {
 
 # A Bag/BagHash/Mix/MixHash consists of a single hash with Pairs.
 # The keys of the hash, are the .WHICH strings of the original object key.

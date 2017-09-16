@@ -1010,50 +1010,41 @@ my class Array { # declared in BOOTSTRAP
     # we have these 9 multies to avoid infiniloop when incorrect types are
     # given to $offset/$size. Other attempts to resolve this showed 30%+
     # performance decreases
-    multi method splice(Array:D: Whatever   $offset, Whatever   $size, **@new) { self.splice($offset, $size, @new) }
-    multi method splice(Array:D: Whatever   $offset, Callable:D $size, **@new) { self.splice($offset, $size, @new) }
-    multi method splice(Array:D: Whatever   $offset, Int:D      $size, **@new) { self.splice($offset, $size, @new) }
-    multi method splice(Array:D: Callable:D $offset, Whatever   $size, **@new) { self.splice($offset, $size, @new) }
-    multi method splice(Array:D: Callable:D $offset, Callable:D $size, **@new) { self.splice($offset, $size, @new) }
-    multi method splice(Array:D: Callable:D $offset, Int:D      $size, **@new) { self.splice($offset, $size, @new) }
-    multi method splice(Array:D: Int:D      $offset, Whatever   $size, **@new) { self.splice($offset, $size, @new) }
-    multi method splice(Array:D: Int:D      $offset, Callable:D $size, **@new) { self.splice($offset, $size, @new) }
-    multi method splice(Array:D: Int:D      $offset, Int:D      $size, **@new) { self.splice($offset, $size, @new) }
 
-    multi method splice(Array:D: Whatever $, Whatever $, @new) {
+    multi method splice(Array:D: Whatever $offset, Whatever $size, +@new) {
         self.splice(self.elems,0,@new)
     }
-    multi method splice(Array:D: Whatever $, Int:D $size, @new) {
-        self.splice(self.elems,$size,@new)
-    }
-    multi method splice(Array:D: Whatever $, Callable:D $size, @new) {
+    multi method splice(Array:D: Whatever $offset, Callable:D $size, +@new) {
         my int $elems = self.elems;
         self.splice($elems,$size(nqp::sub_i($elems,$elems)),@new);
     }
-    multi method splice(Array:D: Callable:D $offset, Callable:D $size, @new) {
-        nqp::stmts(
-          (my int $elems = self.elems),
-          (my int $from  = $offset($elems)),
-          self.splice($from,$size(nqp::sub_i($elems,$from)),@new)
-        )
+    multi method splice(Array:D: Whatever $offset, Int:D $size, +@new) {
+        self.splice(self.elems,$size,@new)
     }
-    multi method splice(Array:D: Callable:D $offset, Whatever $, @new) {
+    multi method splice(Array:D: Callable:D $offset, Whatever $size, +@new) {
         nqp::stmts(
           (my int $elems = self.elems),
           (my int $from  = $offset($elems)),
           self.splice($from,nqp::sub_i($elems,$from),@new)
         )
     }
-    multi method splice(Array:D: Callable:D $offset, Int:D $size, @new) {
+    multi method splice(Array:D: Callable:D $offset, Callable:D $size, +@new) {
+        nqp::stmts(
+          (my int $elems = self.elems),
+          (my int $from  = $offset($elems)),
+          self.splice($from,$size(nqp::sub_i($elems,$from)),@new)
+        )
+    }
+    multi method splice(Array:D: Callable:D $offset, Int:D $size, +@new) {
         self.splice($offset(self.elems),$size,@new)
     }
-    multi method splice(Array:D: Int:D $offset, Whatever $, @new) {
+    multi method splice(Array:D: Int:D $offset, Whatever $size, +@new) {
         self.splice($offset,self.elems - $offset,@new)
     }
-    multi method splice(Array:D: Int:D $offset, Callable:D $size, @new) {
+    multi method splice(Array:D: Int:D $offset, Callable:D $size, +@new) {
         self.splice($offset,$size(self.elems - $offset),@new)
     }
-    multi method splice(Array:D: Int:D $offset, Int:D $size, @new) {
+    multi method splice(Array:D: Int:D $offset, Int:D $size, +@new) {
         nqp::if(
           nqp::islt_i(nqp::unbox_i($offset),0),
           self!splice-offset-fail($offset),

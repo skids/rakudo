@@ -437,6 +437,9 @@ my class BlockVarOptimizer {
     # If p6bindsig is used.
     has int $!uses_bindsig;
 
+    # If ops in this block might bind the topic
+    has int $!binds_topic;
+
     method add_decl($var) {
         my str $scope := $var.scope;
         if $scope eq 'lexical' || $scope eq 'lexicalref' {
@@ -479,6 +482,8 @@ my class BlockVarOptimizer {
 
     method uses_bindsig() { $!uses_bindsig := 1; }
 
+    method binds_topic() { $!binds_topic := 1; }
+
     method get_decls() { %!decls }
 
     method get_usages_flat() { %!usages_flat }
@@ -486,6 +491,8 @@ my class BlockVarOptimizer {
     method get_usages_inner() { %!usages_inner }
 
     method get_calls() { $!calls }
+
+    method get_binds_topic() { $!binds_topic }
 
     method is_poisoned() { $!poisoned }
 
@@ -981,7 +988,7 @@ class Perl6::Optimizer {
                 if $!level >= 2 {
                     my $outer := $!symbols.top_block;
                     $result := self.inline_immediate_block($block, $outer,
-                        nqp::existskey($vars_info.get_decls(), '$_'));
+                        $vars_info.get_binds_topic);
                 }
             }
         }
@@ -1250,6 +1257,9 @@ class Perl6::Optimizer {
             }
             elsif nqp::istype($op[0], QAST::Var) && $op[0].name eq '%_' {
                 @!block_var_stack[nqp::elems(@!block_var_stack) - 1].register_autoslurpy_bind($op);
+            }
+            elsif nqp::istype($op[0], QAST::Var) && $op[0].name eq '$_' {
+                @!block_var_stack[nqp::elems(@!block_var_stack) - 1].binds_topic();
             }
             elsif $op.ann('autoslurpy') {
                 @!block_var_stack[nqp::elems(@!block_var_stack) - 1].register_autoslurpy_setup($op);

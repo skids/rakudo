@@ -2243,7 +2243,7 @@ class Perl6::Actions is HLL::Actions does STDActions {
 
     method statement_prefix:sym<END>($/)   { make $*W.add_phaser($/, 'END', unwanted($<blorst>.ast,'END').ann('code_object')); }
     method statement_prefix:sym<LEAVE>($/) { make $*W.add_phaser($/, 'LEAVE', unwanted($<blorst>.ast,'LEAVE').ann('code_object')); }
-    method statement_prefix:sym<KEEP>($/)  { make $*W.add_phaser($/, 'KEEP', unwanted($<blorst>.ast,'KEEP').ann('code_object')); }
+    method statement_prefix:sym<KEEP>($/)  { make $*W.add_phaser($/, 'KEEP', wanted($<blorst>.ast,'KEEP').ann('code_object'), ($<blorst>.ast).ann('past_block')); }
     method statement_prefix:sym<UNDO>($/)  { make $*W.add_phaser($/, 'UNDO', unwanted($<blorst>.ast,'UNDO').ann('code_object')); }
     method statement_prefix:sym<NEXT>($/)  { make $*W.add_phaser($/, 'NEXT', unwanted($<blorst>.ast,'NEXT').ann('code_object')); }
     method statement_prefix:sym<LAST>($/)  { make $*W.add_phaser($/, 'LAST', unwanted($<blorst>.ast,'LAST').ann('code_object')); }

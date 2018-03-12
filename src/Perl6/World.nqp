@@ -3860,6 +3860,28 @@ class Perl6::World is HLL::World {
 
     # Handles addition of a phaser.
     method add_phaser($/, $phaser, $block, $phaser_past?) {
+        if $phaser eq 'POST' || $phaser eq 'KEEP' {
+            # Needs $_ that can be set to the return value.
+            $phaser_past.custom_args(1);
+            $phaser_past[0].unshift(QAST::Op.new( :op('p6bindsig') ));
+            if $phaser_past.symbol('$_') {
+                for @($phaser_past[0]) {
+                    if nqp::istype($_, QAST::Op) && $_.op eq 'bind' && $_[0].name eq '$_' {
+                        $_.op('null'); $_.shift(); $_.shift();
+                    }
+                }
+            }
+            else {
+                $phaser_past[0].unshift(QAST::Var.new( :name('$_'), :scope('lexical'), :decl('var') ));
+            }
+            nqp::push(
+                nqp::getattr($block.signature, self.find_symbol(['Signature'], :setting-only), '@!params'),
+                self.create_parameter($/, hash(
+                        variable_name => '$_', is_raw => 1,
+                        nominal_type => self.find_symbol(['Mu'], :setting-only)
+                    )));
+        }
+
         if $phaser eq 'BEGIN' {
             # BEGIN phasers get run immediately.
             my $result := self.handle-begin-time-exceptions($/, 'evaluating a BEGIN', $block);
@@ -3927,28 +3949,6 @@ class Perl6::World is HLL::World {
                     )
                 ),
             );
-
-            if $phaser eq 'POST' {
-                # Needs $_ that can be set to the return value.
-                $phaser_past.custom_args(1);
-                $phaser_past[0].unshift(QAST::Op.new( :op('p6bindsig') ));
-                if $phaser_past.symbol('$_') {
-                    for @($phaser_past[0]) {
-                        if nqp::istype($_, QAST::Op) && $_.op eq 'bind' && $_[0].name eq '$_' {
-                            $_.op('null'); $_.shift(); $_.shift();
-                        }
-                    }
-                }
-                else {
-                    $phaser_past[0].unshift(QAST::Var.new( :name('$_'), :scope('lexical'), :decl('var') ));
-                }
-                nqp::push(
-                    nqp::getattr($block.signature, self.find_symbol(['Signature'], :setting-only), '@!params'),
-                    self.create_parameter($/, hash(
-                            variable_name => '$_', is_raw => 1,
-                            nominal_type => self.find_symbol(['Mu'], :setting-only)
-                        )));
-            }
 
             self.context().cur_code_object().add_phaser($phaser, $block);
             return QAST::Var.new(:name('Nil'), :scope('lexical'));

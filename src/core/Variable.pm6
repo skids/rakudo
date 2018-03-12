@@ -19,10 +19,14 @@ my class Variable {
         $*W.throw( self.slash, |c );
     }
 
-    submethod willdo(&block, $caller-levels = 3) {
-        $caller-levels == 3
-            ?? -> { block(nqp::atkey(nqp::ctxcaller(nqp::ctxcaller(nqp::ctxcaller(nqp::ctx()))), self.name)) }
-            !! -> { block(nqp::atkey(nqp::ctxcaller(nqp::ctx()), self.name)) }
+    submethod willdo(&block, $caller-levels = 3, $discard-param = 0) {
+        $discard-param
+          ?? $caller-levels == 3
+             ?? -> $ { block(nqp::atkey(nqp::ctxcaller(nqp::ctxcaller(nqp::ctxcaller(nqp::ctx()))), self.name)) }
+             !! -> $ { block(nqp::atkey(nqp::ctxcaller(nqp::ctx()), self.name)) }
+          !! $caller-levels == 3
+             ?? -> { block(nqp::atkey(nqp::ctxcaller(nqp::ctxcaller(nqp::ctxcaller(nqp::ctx()))), self.name)) }
+             !! -> { block(nqp::atkey(nqp::ctxcaller(nqp::ctx()), self.name)) }
     }
 
     submethod native(Mu $what) {
@@ -162,7 +166,7 @@ multi sub trait_mod:<will>(Variable:D $v, $block, :$leave! ) {
     $v.block.add_phaser('LEAVE', $v.willdo($block) );
 }
 multi sub trait_mod:<will>(Variable:D $v, $block, :$keep! ) {
-    $v.block.add_phaser('KEEP', $v.willdo($block));
+    $v.block.add_phaser('KEEP', $v.willdo($block, 3 , 1));
 }
 multi sub trait_mod:<will>(Variable:D $v, $block, :$undo! ) {
     $v.block.add_phaser('UNDO', $v.willdo($block));

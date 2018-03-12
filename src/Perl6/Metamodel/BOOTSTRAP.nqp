@@ -3278,7 +3278,7 @@ nqp::sethllconfig('perl6', nqp::hash(
                                 if nqp::eqaddr(nqp::decont($_),$phaser) {
                                     $run := !nqp::isnull($resultish) &&
                                              nqp::isconcrete($resultish) &&
-                                             $resultish.defined;
+                                             $resultish.defined && 2;
                                     last;
                                 }
                             }
@@ -3293,12 +3293,23 @@ nqp::sethllconfig('perl6', nqp::hash(
                                 }
                             }
                         }
+
                         if $run {
 #?if jvm
-                            $phaser();
+                            if $run == 2 {
+                                $phaser($resultish);
+                            }
+                            else {
+                                $phaser();
+                            }
 #?endif
 #?if moar
-                            nqp::p6capturelexwhere($phaser.clone())();
+                            if $run == 2 {
+                                nqp::p6capturelexwhere($phaser.clone())($resultish);
+                            }
+                            else {
+                                nqp::p6capturelexwhere($phaser.clone())();
+                            }
 #?endif
                             CATCH { nqp::push(@exceptions, $_) }
                         }

@@ -245,8 +245,14 @@ sub unwanted($ast, $by) {
         # Unwant all kids, not just last one, so we recurse into blocks and such,
         # don't just rely on the optimizer to default to void.
         my int $i := 0;
+        my $resultchild := $ast.resultchild // $e;
         while $i <= $e {
-            $ast[$i] := unwanted($ast[$i], $byby);
+            if $i == $resultchild && $*WANTEDOUTERBLOCK && $*WANTEDOUTERBLOCK.ann('WANTMEPLEASE') {
+                $ast[$i] := WANTED($ast[$i], 'phaser');
+            }
+            else {
+                $ast[$i] := unwanted($ast[$i], $byby);
+            }
             ++$i;
         }
         $ast.sunk(1);

@@ -6435,12 +6435,13 @@ class Perl6::Actions is HLL::Actions does STDActions {
                     hunt_loose_adverbs_in_arglist($EXPR, @args);
                 }
                 for @args {
-                    if (+$_[2].list) {
-                        $_[2] := QAST::Want.new(|$_[2].list);
-                    }
-                    else {
+                    if $_[2].named {
                         $_[2] := QAST::Want.new($_[2]);
                     }
+                    else {
+                        $_[2] := QAST::Want.new(|$_[2].list);
+                    }
+
                 }
             }
         }

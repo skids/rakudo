@@ -6435,13 +6435,8 @@ class Perl6::Actions is HLL::Actions does STDActions {
                     hunt_loose_adverbs_in_arglist($EXPR, @args);
                 }
                 for @args {
-                    if $_[2].named {
-                        $_[2] := QAST::Want.new($_[2]);
-                    }
-                    else {
-                        $_[2] := QAST::Want.new(|$_[2].list);
-                    }
-
+                    $_[2] := $_[2].shallow_clone;
+                    $_[2].named(NQPMu);
                 }
             }
         }
@@ -6602,7 +6597,8 @@ class Perl6::Actions is HLL::Actions does STDActions {
                             hunt_loose_adverbs_in_arglist($EXPR, @args);
                         }
                         for @args {
-                            $_[2] := QAST::Want.new(|$_[2].list);
+                            $_[2] := $_[2].shallow_clone;
+                            $_[2].named(NQPMu);
                             $past.push(
                                 QAST::Op.new(
                                     :op('callmethod'), :name('new'), :returns($*W.find_symbol(['Pair'])), :node($_.node // $/),

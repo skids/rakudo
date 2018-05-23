@@ -1367,7 +1367,7 @@ class Perl6::World is HLL::World {
         my $cur_lex := $outer;
 
         # Can only install packages as our or my scope.
-        $create_scope := "our" if $create_scope eq 'unit';
+        $create_scope := "our" if $create_scope eq 'unit' || $create_scope eq 'insist';
         unless $create_scope eq 'my' || $create_scope eq 'our' {
             self.throw($/, 'X::Declaration::Scope',
                 scope       => $*SCOPE,
@@ -2225,7 +2225,7 @@ class Perl6::World is HLL::World {
     #   0 = the QAST::Block object
     #   1 = the compiler thunk
     #   2 = the clone callback
-    method finish_code_object($code, $code_past, $is_dispatcher = 0, :$yada) {
+    method finish_code_object($code, $code_past, $is_dispatcher = 0, :$yada, :$insist) {
         my $fixups := QAST::Stmts.new();
         my $des    := QAST::Stmts.new();
 
@@ -2353,6 +2353,11 @@ class Perl6::World is HLL::World {
         # Set yada flag if needed.
         if $yada {
             nqp::bindattr_i($code, $routine_type, '$!yada', 1);
+        }
+
+        # Set insistence if needed.  Will only be asked for with methods (maybe grammar rules in future)
+        if $insist {
+            $code.set_insistent;
         }
 
         # If it's a routine, store the package to make backtraces nicer.

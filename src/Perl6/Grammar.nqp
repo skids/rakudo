@@ -2636,6 +2636,7 @@ grammar Perl6::Grammar is HLL::Grammar does STD {
     }
     token scope_declarator:sym<augment>   { <sym> <scoped('augment')> }
     token scope_declarator:sym<anon>      { <sym> <scoped('anon')> }
+    token scope_declarator:sym<insist>    { <sym> <scoped('insist')> }
     token scope_declarator:sym<state>     { <sym> <scoped('state')> }
     token scope_declarator:sym<supersede> {
         <sym> <scoped('supersede')> <.NYI('"supersede"')>

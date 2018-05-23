@@ -34,10 +34,12 @@ class Perl6::Metamodel::ConcreteRoleHOW
     my class Collision {
         has $!name;
         has @!roles;
+        has @!methods;
         has $!private;
         has $!multi;
         method name() { $!name }
         method roles() { @!roles }
+        method methods() { @!methods }
         method private() { $!private }
         method multi() { $!multi }
     }
@@ -51,9 +53,13 @@ class Perl6::Metamodel::ConcreteRoleHOW
         $obj;
     }
 
-    method add_collision($obj, $colliding_name, @role_names, :$private = 0, :$multi) {
+    method add_collision($obj, $colliding_name, @roles, @methods, :$private = 0, :$multi) {
+        my @role_names;
+        for @roles {
+            @role_names.push($_.HOW.name($_));
+        }
         @!collisions[+@!collisions] := Collision.new(
-            :name($colliding_name), :roles(@role_names), :$private, :$multi
+            :name($colliding_name), :roles(@role_names), :methods(@methods), :$private, :$multi
         );
     }
 
@@ -97,6 +103,11 @@ class Perl6::Metamodel::ConcreteRoleHOW
         else {
             @!roles
         }
+    }
+
+    method insistent($obj) {
+        my $me := @!roles[0];
+        $me.HOW.insistent($me)
     }
 
     method add_to_role_typecheck_list($obj, $type) {

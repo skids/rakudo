@@ -38,7 +38,7 @@ my class RoleToRoleApplier {
                     }
                     unless $found {
                         @meth_list.push($meth);
-                        @meth_providers.push($role.HOW.name($role));
+                        @meth_providers.push($role);
                     }
                 }
             }
@@ -56,24 +56,72 @@ my class RoleToRoleApplier {
         for %meth_info {
             my $name := $_.key;
             my @add_meths := %meth_info{$name};
+            my @providers := %meth_providers{$name};
 
             # Do we already have a method of this name? If so, ignore all of the
-            # methods we have from elsewhere.
-            unless nqp::existskey(%target_meth_info, $name) {
+            # methods we have from elsewhere, but complain if we ignore an
+            # insistent one
+            if nqp::existskey(%target_meth_info, $name) {
+                my $insists := 0;
+                my $first_insist;
+                my $idx := 0;
+                for @add_meths {
+                    my $insist := 0;
+                    my $provider := NQPMu;
+                    try { $provider := $_.package }
+                    if $provider =:= NQPMu {
+                        # We hit a circular sawtooth.  Fake it.
+                        $provider := @providers[$idx];
+                    }
+                    $insist := $_.insistent;
+                    unless $insist {
+                        if nqp::iseq_s($provider.HOW.name($provider),'Perl6::Metamodel::CurriedRoleHOW') {
+                            $insist := $provider.insistent;
+                        }
+                        else {
+                            $insist := $provider.HOW.insistent($provider);
+                        }
+                    }
+                    if $insist {
+                        unless $insists {
+                            if nqp::iseq_s($provider.HOW.name($provider),'Perl6::Metamodel::CurriedRoleHOW') {
+                                $first_insist := $provider.name($provider);
+                            }
+                            else {
+                                $first_insist := $provider.HOW.name($provider)
+                            }
+                        }
+                        $insists++
+                    };
+                    $idx++;
+                }
+                if $insists > 0 {
+                    my $mess := 'Warning: Overrode insistent method "' ~ $name
+                        ~ '" from role "' ~ $first_insist ~ '"';
+                    note($mess);
+                }
+            }
+            else {
                 # No methods in the target role. If only one, it's easy...
                 if +@add_meths == 1 {
                     $target.HOW.add_method($target, $name, @add_meths[0]);
                 }
                 else {
                     # Find if any of the methods are actually requirements, not
-                    # implementations.
+                    # implementations.  Also eliminate duplicates from diamond
+                    # compositions.
+
                     my @impl_meths;
+                    my $diamond := False; # importantly !=:= NQPMu
                     for @add_meths {
                         my $yada := 0;
+                        my $pack;
                         try { $yada := $_.yada; }
-                        unless $yada {
+                        try { $pack := $_.package }
+                        unless $yada || ($diamond =:= $pack && nqp::isne_s($pack.HOW.name($pack), 'GLOBAL')) {
                             @impl_meths.push($_);
                         }
+                        $diamond := $pack;
                     }
 
                     # If there's still more than one possible - add to collisions list.
@@ -86,7 +134,7 @@ my class RoleToRoleApplier {
                         $target.HOW.add_method($target, $name, @add_meths[0]);
                     }
                     else {
-                        $target.HOW.add_collision($target, $name, %meth_providers{$name});
+                        $target.HOW.add_collision($target, $name, %meth_providers{$name}, @impl_meths);
                     }
                 }
             }
@@ -98,20 +146,70 @@ my class RoleToRoleApplier {
             for %priv_meth_info {
                 my $name := $_.key;
                 my @add_meths := %priv_meth_info{$name};
-                unless nqp::existskey(%target_priv_meth_info, $name) {
+                my @providers := %meth_providers{$name};
+
+                # Do we already have a method of this name? If so, ignore all of the
+                # methods we have from elsewhere, but complain if we ignore one
+                # that is insistent.
+                if nqp::existskey(%target_priv_meth_info, $name) {
+                    my $insists := 0;
+                    my $first_insist;
+                    my $idx := 0;
+                    for @add_meths {
+                        my $insist := 0;
+                        my $provider := NQPMu;
+                        try { $provider := $_.package; }
+                        if $provider =:= NQPMu {
+                            # We hit a circular sawtooth.  Fake it.
+                            $provider := @providers[$idx];
+                        }
+                        $insist := $_.insistent;
+                        unless $insist {
+                            if nqp::iseq_s($provider.HOW.name($provider),'Perl6::Metamodel::CurriedRoleHOW') {
+                                $insist := $provider.insistent;
+                            }
+                            else {
+                                $insist := $provider.HOW.insistent($provider);
+                            }
+                        }
+                        if $insist {
+                            unless $insists {
+                                if nqp::iseq_s($provider.HOW.name($provider),'Perl6::Metamodel::CurriedRoleHOW') {
+                                    $first_insist := $provider.name($provider);
+                                }
+                                else {
+                                    $first_insist := $provider.HOW.name($provider)
+                                }
+                            }
+                            $insists++
+                        };
+                        $idx++;
+                    }
+                    if $insists > 0 {
+                        my $mess := 'Warning: Overrode insistent private method "!' ~ $name
+                            ~ '" from role "' ~ $first_insist ~ '"';
+                        note($mess);
+                    }
+                }
+                else {
                     if +@add_meths == 1 {
                         $target.HOW.add_private_method($target, $name, @add_meths[0]);
                     }
                     else {
                         # Find if any of the methods are actually requirements, not
-                        # implementations.
+                        # implementations.  Also eliminate duplicates from diamond
+                        # compositions.
                         my @impl_meths;
+                        my $diamond := False; # importantly !=:= NQPMu
                         for @add_meths {
                             my $yada := 0;
+                            my $pack;
                             try { $yada := $_.yada; }
-                            unless $yada {
+                            try { $pack := $_.package }
+                            unless $yada || $diamond =:= $pack {
                                 @impl_meths.push($_);
                             }
+                            $diamond := $pack;
                         }
 
                         # If there's still more than one possible - add to collisions list.
@@ -125,7 +223,7 @@ my class RoleToRoleApplier {
                             $target.HOW.add_private_method($target, $name, @add_meths[0]);
                         }
                         else {
-                            $target.HOW.add_collision($target, $name, %priv_meth_providers{$name}, :private(1));
+                            $target.HOW.add_collision($target, $name, %priv_meth_providers{$name}, @impl_meths, :private(1));
                         }
                     }
                 }
@@ -168,25 +266,102 @@ my class RoleToRoleApplier {
             }
         }
 
+        if nqp::can($target.HOW, 'multi_methods_to_incorporate') {
+            my %multi_methods_to_incorporate := $target.HOW.multi_methods_to_incorporate($target);
+            for %multi_methods_to_incorporate {
+                my $name := $_.name;
+                my $code := $_.code;
+
+                # Do we already have a method of this name/sig? If so, ignore
+                # all of the methods we have from elsewhere, but complain if
+                # we ignore an insistent one.
+                if nqp::existskey(%multis_by_name, $name) {
+                    my @add_meths := %multis_by_name{$name};
+                    my $insists := 0;
+                    my $insistent_provider;
+                    my $insistent_code;
+                    my @pruned_meths := [];
+                    for @add_meths {
+                        my $to_add := $_[1];
+
+                        my $provider := NQPMu;
+                        try { $provider := $to_add.package }
+                        if $provider =:= NQPMu {
+                            # We hit a circular sawtooth.  Fake it.
+                            $provider := $_[0];
+                        }
+                        if Perl6::Metamodel::Configuration.compare_multi_sigs($code, $to_add) {
+                            my $insist := $to_add.insistent;
+                            unless $insist {
+                                if nqp::iseq_s($provider.HOW.name($provider),'Perl6::Metamodel::CurriedRoleHOW') {
+                                    $insist := $provider.insistent;
+                                }
+                                else {
+                                    $insist := $provider.HOW.insistent($provider);
+                                }
+                            }
+                            if $insist {
+                                unless $insists {
+                                    $insistent_code := $to_add;
+                                    if nqp::iseq_s($provider.HOW.name($provider),'Perl6::Metamodel::CurriedRoleHOW') {
+                                        $insistent_provider := $provider.name($provider);
+                                    }
+                                    else {
+                                        $insistent_provider := $provider.HOW.name($provider);
+                                    }
+                                }
+                                $insists++;
+                            };
+                        }
+                        else {
+                            @pruned_meths.push($_);
+                        }
+                    }
+                    %multis_by_name{$name} := @pruned_meths;
+                    if $insists > 0 {
+                        my $sigstr := "";
+                        my $sig := $insistent_code.signature;
+                        if nqp::isconcrete($sig) && nqp::can($sig, 'gist') {
+                            $sigstr := $sig.gist;
+                        }
+                        my $mess := 'Warning: Overrode insistent multimethod '
+                            ~ 'candidate "' ~ $name ~ $sigstr ~ '" from role "'
+                            ~ $insistent_provider ~ '"';
+                        note($mess);
+                    }
+                }
+            }
+        }
+
+
         # Look for conflicts, and compose non-conflicting.
         for %multis_by_name {
             my $name := $_.key;
             my @cands := $_.value;
             my @collisions;
+            my @collmeths;
             for @cands -> $c1 {
                 my @collides;
                 for @cands -> $c2 {
                     unless $c1[1] =:= $c2[1] {
                         if Perl6::Metamodel::Configuration.compare_multi_sigs($c1[1], $c2[1]) {
-                            for ($c1, $c2) {
-                                nqp::push(@collides, $_[0].HOW.name($_[0]));
+                            my $p1 := False; # importantly !=:= NQPMu
+                            my $p2;
+
+                            try { $p1 := $c1[1].package }
+                            try { $p2 := $c2[1].package }
+                            unless $p1 =:= $p2 {
+                                nqp::push(@collides, $c1[0]);
+                                nqp::push(@collmeths, $c1[1]);
+                                nqp::push(@collides, $c2[0]);
+                                nqp::push(@collmeths, $c2[1]);
                             }
                             last;
                         }
                     }
                 }
                 if @collides {
-                    $target.HOW.add_collision($target, $name, @collides, :multi($c1[1]));
+                    $target.HOW.add_collision($target, $name, @collides, @collmeths, :multi($c1[1]));
                 }
                 else {
                     $target.HOW.add_multi_method($target, $name, $c1[1]);
@@ -208,19 +383,29 @@ my class RoleToRoleApplier {
         for @roles {
             my $how := $_.HOW;
 
-            # Compose is any attributes, unless there's a conflict.
+            # Compose in any attributes, unless there's a conflict.
             my @attributes := $how.attributes($_, :local(1));
             for @attributes {
                 my $add_attr := $_;
                 my $skip := 0;
                 my @cur_attrs := $target.HOW.attributes($target, :local(1));
+                my $add_pack := False; # importantly !=:= NQPMu
+                try { $add_pack := $_.package }
+
                 for @cur_attrs {
+                    my $pack;
+                    try { $pack := $_.package }
                     if $_ =:= $add_attr {
                         $skip := 1;
                     }
                     else {
                         if $_.name eq $add_attr.name {
-                            nqp::die("Attribute '" ~ $_.name ~ "' conflicts in role composition");
+                            if ($pack =:= $add_pack) {
+                                $skip := 1;
+                            }
+                            else {
+                                nqp::die("Attribute '" ~ $_.name ~ "' conflicts in role composition");
+                            }
                         }
                     }
                 }

@@ -1259,6 +1259,11 @@ BEGIN {
             }
             nqp::p6bool(1)
         }));
+    Attribute.HOW.add_method(Attribute, 'set_package', nqp::getstaticcode(sub ($self, $pack) {
+            my $dcself := nqp::decont($self);
+            nqp::bindattr($dcself, Attribute, '$!package', $pack);
+            $dcself
+        }));
     Attribute.HOW.add_method(Attribute, 'set_build', nqp::getstaticcode(sub ($self, $closure) {
             nqp::bindattr(nqp::decont($self), Attribute, '$!build_closure', $closure);
             $self
@@ -2819,6 +2824,11 @@ BEGIN {
             nqp::bindattr_i($dcself, Routine, '$!onlystar', 1);
             $dcself
         }));
+    Routine.HOW.add_method(Routine, 'set_package', nqp::getstaticcode(sub ($self, $pack) {
+            my $dcself := nqp::decont($self);
+            nqp::bindattr($dcself, Routine, '$!package', $pack);
+            $dcself
+        }));
     Routine.HOW.compose_repr(Routine);
     Routine.HOW.set_multi_invocation_attrs(Routine, Routine, '$!onlystar', '$!dispatch_cache');
     Routine.HOW.compose_invocation(Routine);
@@ -2830,6 +2840,17 @@ BEGIN {
 
     # class Method is Routine {
     Method.HOW.add_parent(Method, Routine);
+    Method.HOW.add_attribute(Method, Attribute.new(:name<$!insistent>, :type(int), :package(Method)));
+    Method.HOW.add_method(Method, 'set_insistent', nqp::getstaticcode(sub ($self, :$insist = 1) {
+            my $dcself := nqp::decont($self);
+            nqp::bindattr_i($dcself, Method, '$!insistent', +$insist);
+            $dcself
+        }));
+    Method.HOW.add_method(Method, 'insistent', nqp::getstaticcode(sub ($self) {
+            my $dcself := nqp::decont($self);
+            nqp::getattr_i($dcself, Method, '$!insistent') &&
+            !nqp::getattr_i($dcself, Routine, '$!yada');
+        }));
     Method.HOW.compose_repr(Method);
     Method.HOW.compose_invocation(Method);
 

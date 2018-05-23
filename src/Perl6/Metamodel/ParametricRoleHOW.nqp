@@ -20,6 +20,7 @@ class Perl6::Metamodel::ParametricRoleHOW
     has $!in_group;
     has $!group;
     has $!signatured;
+    has $!insistent;
     has @!role_typecheck_list;
     has $!specialize_lock;
 
@@ -69,6 +70,14 @@ class Perl6::Metamodel::ParametricRoleHOW
 
     method group($obj) {
         $!in_group ?? $!group !! $obj
+    }
+
+    method set_insistent($obj, :$insist = 1) {
+        $!insistent := +$insist
+    }
+
+    method insistent($obj) {
+        $!insistent;
     }
 
     method compose($obj, :$compiler_services) {
@@ -167,8 +176,9 @@ class Perl6::Metamodel::ParametricRoleHOW
         # Go through attributes, reifying as needed and adding to
         # the concrete role.
         for self.attributes($obj, :local(1)) {
-            $conc.HOW.add_attribute($conc,
+            my $inst := $conc.HOW.add_attribute($conc,
                 $_.is_generic ?? $_.instantiate_generic($type_env) !! $_);
+            $inst.set_package(self);
         }
 
         # Go through methods and instantiate them; we always do this

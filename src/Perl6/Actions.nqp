@@ -3093,6 +3093,8 @@ class Perl6::Actions is HLL::Actions does STDActions {
                 QAST::WVal.new( :value($package) ),
                 QAST::Op.new( :op('curlexpad') )));
 
+            $package.HOW.set_insistent($package, :insist($*SCOPE eq 'insist'));
+
             # Finish code object and add it as the role's body block.
             my $code := $*CODE_OBJECT;
             $*W.attach_signature($code, $sig);
@@ -4224,7 +4226,7 @@ class Perl6::Actions is HLL::Actions does STDActions {
         $past.name($name ?? $name !! '<anon>');
 
         my $code := methodize_block($/, $*DECLARAND, $past, $*SIG_OBJ,
-            %*SIG_INFO, :yada(is_yada($/)));
+            %*SIG_INFO, :yada(is_yada($/)), :insist($*SCOPE eq 'insist'));
 
         # If it's a proto but not an onlystar, need some variables for the
         # {*} implementation to use.
@@ -4382,7 +4384,7 @@ class Perl6::Actions is HLL::Actions does STDActions {
         ).annotate_self('sink_ast', QAST::Op.new( :op('null') ))
     }
 
-    sub methodize_block($/, $code, $past, $signature, %sig_info, :$yada) {
+    sub methodize_block($/, $code, $past, $signature, %sig_info, :$yada, :$insist) {
         my $*LEAF := $/;
         # Add signature binding code.
         add_signature_binding_code($past, $signature, %sig_info<parameters>);
@@ -4401,7 +4403,7 @@ class Perl6::Actions is HLL::Actions does STDActions {
 
         # Finish up code object.
         $*W.attach_signature($code, $signature);
-        $*W.finish_code_object($code, $past, $*MULTINESS eq 'proto', :yada($yada));
+        $*W.finish_code_object($code, $past, $*MULTINESS eq 'proto', :yada($yada), :insist($insist));
         $*W.add_phasers_handling_code($code, $past);
         $code
     }
@@ -4421,7 +4423,7 @@ class Perl6::Actions is HLL::Actions does STDActions {
         else {
             $meta_meth := $*MULTINESS eq 'multi' ?? 'add_multi_method' !! 'add_method';
         }
-        if $scope eq '' || $scope eq 'has' {
+        if $scope eq '' || $scope eq 'has' || $scope eq 'insist' {
             # Ensure that current package supports methods, and if so
             # add the method.
             if nqp::can($package.HOW, $meta_meth) {
